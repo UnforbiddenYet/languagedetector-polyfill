@@ -1,0 +1,43 @@
+{
+  "name": "language-detector-polyfill",
+  "version": "0.1.0",
+  "description": "Polyfill for the LanguageDetector Web API using CLD3-like trigram analysis",
+  "type": "module",
+  "main": "dist/language-detector-polyfill.umd.cjs",
+  "module": "dist/language-detector-polyfill.js",
+  "types": "dist/index.d.ts",
+  "exports": {
+    ".": {
+      "import": "./dist/language-detector-polyfill.js",
+      "require": "./dist/language-detector-polyfill.umd.cjs",
+      "types": "./dist/index.d.ts"
+    }
+  },
+  "files": [
+    "dist",
+    "src"
+  ],
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build && tsc --emitDeclarationOnly",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "prepublishOnly": "npm run build"
+  },
+  "keywords": [
+    "language-detector",
+    "polyfill",
+    "language-detection",
+    "web-api",
+    "i18n",
+    "cld3"
+  ],
+  "author": "UnforbiddenYet",
+  "license": "MIT",
+  "devDependencies": {
+    "typescript": "^5.3.3",
+    "vite": "^5.0.10",
+    "vite-plugin-dts": "^3.7.0",
+    "vitest": "^1.1.0"
+  }
+}
