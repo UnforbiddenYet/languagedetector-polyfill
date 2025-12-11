@@ -3,13 +3,18 @@ import type {
   LanguageDetectorCreateOptions,
   LanguageDetectorAvailabilityOptions,
   AvailabilityStatus,
-} from './types';
-import { detectLanguage, detectByScript } from './detection-engine';
-import { isLanguageSupported, getSupportedLanguages } from './language-profiles';
+} from "./types";
+import {
+  detectWithCld3,
+  initCld3,
+  isCld3Ready,
+  disposeCld3,
+  CLD3_SUPPORTED_LANGUAGES,
+} from "./cld3-engine";
 
 /**
  * LanguageDetector polyfill implementing the Web API specification.
- * Uses CLD3-like trigram analysis for language detection.
+ * Uses Google's CLD3 neural network model via WebAssembly for language detection.
  *
  * @see https://developer.mozilla.org/en-US/docs/Web/API/LanguageDetector
  */
@@ -63,20 +68,26 @@ export class LanguageDetector {
   static async availability(
     options?: LanguageDetectorAvailabilityOptions
   ): Promise<AvailabilityStatus> {
-    // Check if expected languages are supported
+    // Check if expected languages are supported by CLD3
     if (options?.expectedInputLanguages) {
-      const unsupported = options.expectedInputLanguages.filter(
-        (lang) => !isLanguageSupported(lang)
-      );
+      const unsupported = options.expectedInputLanguages.filter((lang) => {
+        const normalizedLang = lang.split("-")[0].toLowerCase();
+        return !CLD3_SUPPORTED_LANGUAGES.has(normalizedLang);
+      });
 
       // If more than half are unsupported, return unavailable
       if (unsupported.length > options.expectedInputLanguages.length / 2) {
-        return 'unavailable';
+        return "unavailable";
       }
     }
 
-    // Polyfill is always immediately available (no model download needed)
-    return 'available';
+    // Check if CLD3 is already loaded
+    if (isCld3Ready()) {
+      return "available";
+    }
+
+    // CLD3 WASM needs to be loaded
+    return "downloadable";
   }
 
   /**
@@ -98,15 +109,23 @@ export class LanguageDetector {
   ): Promise<LanguageDetector> {
     // Check for abort signal
     if (options?.signal?.aborted) {
-      throw new DOMException('Language detector creation aborted', 'AbortError');
+      throw new DOMException(
+        "Language detector creation aborted",
+        "AbortError"
+      );
     }
 
-    // Call monitor callback if provided (for API compatibility)
+    // Set up progress monitoring
+    let progressCallback: ((loaded: number, total: number) => void) | null =
+      null;
+
     if (options?.monitor) {
-      const listeners: Array<(event: { loaded: number; total: number }) => void> = [];
+      const listeners: Array<
+        (event: { loaded: number; total: number }) => void
+      > = [];
       const monitor = {
         addEventListener(
-          _type: 'downloadprogress',
+          _type: "downloadprogress",
           listener: (event: { loaded: number; total: number }) => void
         ) {
           listeners.push(listener);
@@ -115,12 +134,31 @@ export class LanguageDetector {
 
       options.monitor(monitor);
 
-      // Simulate instant download completion
-      listeners.forEach((listener) => listener({ loaded: 1, total: 1 }));
+      progressCallback = (loaded: number, total: number) => {
+        listeners.forEach((listener) => listener({ loaded, total }));
+      };
     }
 
-    // Simulate async initialization (could be used for lazy loading)
-    await Promise.resolve();
+    // Initialize CLD3 WASM module
+    if (!isCld3Ready()) {
+      // Report download starting
+      progressCallback?.(0, 1);
+
+      try {
+        await initCld3();
+      } catch (error) {
+        throw new DOMException(
+          `Failed to initialize language detector: ${error}`,
+          "OperationError"
+        );
+      }
+
+      // Report download complete
+      progressCallback?.(1, 1);
+    } else {
+      // Already loaded
+      progressCallback?.(1, 1);
+    }
 
     return new LanguageDetector(options);
   }
@@ -141,55 +179,21 @@ export class LanguageDetector {
   async detect(text: string): Promise<LanguageDetectionResult[]> {
     this.checkDestroyed();
 
-    if (typeof text !== 'string') {
-      throw new TypeError('Input must be a string');
+    if (typeof text !== "string") {
+      throw new TypeError("Input must be a string");
+    }
+
+    // Handle empty text
+    if (text.trim().length === 0) {
+      return [{ detectedLanguage: "und", confidence: 0 }];
     }
 
     // Update quota usage
     this._inputQuota = Math.max(0, this._inputQuota - text.length);
 
-    // Simulate async operation
-    await Promise.resolve();
-
-    // Try script-based detection first for high-confidence results
-    const scriptResult = detectByScript(text);
-    if (scriptResult && scriptResult.confidence > 0.9) {
-      // Still run full detection but boost the script-detected language
-      const fullResults = detectLanguage(
-        text,
-        this._expectedInputLanguages.length > 0
-          ? [...this._expectedInputLanguages]
-          : undefined
-      );
-
-      // Find and boost the script-detected language
-      const boostedResults = fullResults.map((r) => {
-        if (r.detectedLanguage === scriptResult.detectedLanguage) {
-          return {
-            ...r,
-            confidence: Math.min(1, r.confidence + scriptResult.confidence * 0.3),
-          };
-        }
-        return r;
-      });
-
-      // Re-normalize confidences
-      const total = boostedResults.reduce((sum, r) => sum + r.confidence, 0);
-      return boostedResults
-        .map((r) => ({
-          ...r,
-          confidence: total > 0 ? r.confidence / total : 0,
-        }))
-        .sort((a, b) => b.confidence - a.confidence);
-    }
-
-    // Use trigram-based detection
-    return detectLanguage(
-      text,
-      this._expectedInputLanguages.length > 0
-        ? [...this._expectedInputLanguages]
-        : undefined
-    );
+    // Use CLD3 neural network for detection
+    // Note: expectedInputLanguages is stored for API compatibility but doesn't affect detection
+    return detectWithCld3(text);
   }
 
   /**
@@ -201,8 +205,8 @@ export class LanguageDetector {
   async measureInputUsage(text: string): Promise<number> {
     this.checkDestroyed();
 
-    if (typeof text !== 'string') {
-      throw new TypeError('Input must be a string');
+    if (typeof text !== "string") {
+      throw new TypeError("Input must be a string");
     }
 
     // In this polyfill, quota usage is simply the text length
@@ -215,6 +219,7 @@ export class LanguageDetector {
    */
   destroy(): void {
     this._destroyed = true;
+    disposeCld3();
   }
 
   /**
@@ -223,16 +228,9 @@ export class LanguageDetector {
   private checkDestroyed(): void {
     if (this._destroyed) {
       throw new DOMException(
-        'LanguageDetector has been destroyed',
-        'InvalidStateError'
+        "LanguageDetector has been destroyed",
+        "InvalidStateError"
       );
     }
-  }
-
-  /**
-   * Get list of all supported languages
-   */
-  static getSupportedLanguages(): string[] {
-    return getSupportedLanguages();
   }
 }

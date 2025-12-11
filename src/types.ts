@@ -2,7 +2,7 @@
  * Result of language detection for a piece of text
  */
 export interface LanguageDetectionResult {
-  /** BCP 47 language tag (e.g., "en", "de", "zh") */
+  /** BCP 47 language tag (e.g., "en", "uk", "zh") */
   detectedLanguage: string;
   /** Confidence score between 0 and 1 */
   confidence: number;
@@ -32,10 +32,10 @@ export interface LanguageDetectorAvailabilityOptions {
  * Availability status of the language detector
  */
 export type AvailabilityStatus =
-  | 'available'
-  | 'downloadable'
-  | 'downloading'
-  | 'unavailable';
+  | "available"
+  | "downloadable"
+  | "downloading"
+  | "unavailable";
 
 /**
  * Download progress event
@@ -50,30 +50,7 @@ export interface DownloadProgressEvent {
  */
 export interface DownloadMonitor {
   addEventListener(
-    type: 'downloadprogress',
+    type: "downloadprogress",
     listener: (event: DownloadProgressEvent) => void
   ): void;
-}
-
-/**
- * Language profile containing trigram frequencies
- */
-export interface LanguageProfile {
-  /** ISO 639-1 language code */
-  code: string;
-  /** Language name */
-  name: string;
-  /** Unicode script used by this language */
-  scripts: string[];
-  /** Top trigrams with their relative frequencies */
-  trigrams: string[];
-}
-
-/**
- * Script detection result
- */
-export interface ScriptInfo {
-  script: string;
-  count: number;
-  ratio: number;
 }

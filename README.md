@@ -1,17 +1,15 @@
 # LanguageDetector Polyfill
 
-A polyfill for the [LanguageDetector Web API](https://developer.mozilla.org/en-US/docs/Web/API/LanguageDetector) that provides CLD3-like language detection using trigram analysis and Unicode script detection.
+A polyfill for the [LanguageDetector Web API](https://developer.mozilla.org/en-US/docs/Web/API/LanguageDetector) that uses Google's [CLD3 (Compact Language Detector v3)](https://github.com/google/cld3) neural network model via [WebAssembly cld3 binary](github.com/kwonoj/cld3-asm) for accurate language detection.
 
 ## Features
 
-- Full implementation of the LanguageDetector Web API specification
-- CLD3-like detection using trigram frequency analysis
-- Unicode script detection for non-Latin languages (Chinese, Japanese, Korean, Arabic, etc.)
-- Supports 40+ languages out of the box
-- Zero dependencies
+- Browser-agnostic implementation of the LanguageDetector Web API specification
+- Uses Google's CLD3 neural network model (same as Chrome's built-in detector)
+- WebAssembly-based for high performance
+- Supports 104 languages (see [CLD3 supported languages](https://github.com/google/cld3#supported-languages))
 - TypeScript support with full type definitions
 - Works in browsers and Node.js
-- Lightweight (~15KB minified)
 
 ## Installation
 
@@ -26,13 +24,13 @@ npm install language-detector-polyfill
 ```javascript
 import { LanguageDetector } from 'language-detector-polyfill';
 
-// Create a detector instance
+// Create a detector instance (loads CLD3 WASM on first use)
 const detector = await LanguageDetector.create();
 
 // Detect language
 const results = await detector.detect('Bonjour le monde!');
 console.log(results[0].detectedLanguage); // "fr"
-console.log(results[0].confidence);       // 0.85
+console.log(results[0].confidence);       // 0.99
 
 // Clean up when done
 detector.destroy();
@@ -57,12 +55,16 @@ const results = await detector.detect('Hello world');
 import { LanguageDetector } from 'language-detector-polyfill';
 
 const availability = await LanguageDetector.availability({
-  expectedInputLanguages: ['en', 'de', 'fr']
+  expectedInputLanguages: ['en', 'uk', 'ja']
 });
 
-if (availability === 'available') {
+if (availability === 'available' || availability === 'downloadable') {
   const detector = await LanguageDetector.create({
-    expectedInputLanguages: ['en', 'de', 'fr']
+    monitor(monitor) {
+      monitor.addEventListener('downloadprogress', (e) => {
+        console.log(`Loading: ${Math.floor(e.loaded * 100)}%`);
+      });
+    }
   });
   // Use detector...
 }
@@ -70,15 +72,12 @@ if (availability === 'available') {
 
 ### With Expected Languages
 
-Limit detection to specific languages for better performance and accuracy:
+**Important:** Per the [Web API specification](https://webmachinelearning.github.io/translation-api/#language-detector-language-detection), `expectedInputLanguages` is used as an optimization hint during model initialization. The CLD3 WASM module loads all languages at once, so this `expectedInputLanguages` API is provided for compatibility but doesn't affect detection.
 
 ```javascript
 const detector = await LanguageDetector.create({
   expectedInputLanguages: ['en', 'es', 'fr', 'de']
 });
-
-// Detection will only consider these four languages
-const results = await detector.detect('This is English text');
 ```
 
 ### Script Tag (Auto-Install)
@@ -95,12 +94,14 @@ const results = await detector.detect('This is English text');
 
 ## API Reference
 
+Follows [LanguageDetector Web API](https://developer.mozilla.org/en-US/docs/Web/API/LanguageDetector)
+
 ### `LanguageDetector.availability(options?)`
 
 Check if the detector is available for a given configuration.
 
 **Parameters:**
-- `options.expectedInputLanguages` (string[]): Expected input language codes
+- `options.expectedInputLanguages` (string[]): Expected input language codes 
 
 **Returns:** `Promise<'available' | 'downloadable' | 'downloading' | 'unavailable'>`
 
@@ -109,9 +110,9 @@ Check if the detector is available for a given configuration.
 Create a new LanguageDetector instance.
 
 **Parameters:**
-- `options.expectedInputLanguages` (string[]): Limit detection to these languages
+- `options.expectedInputLanguages` (string[]): Optimization hint for expected input languages (provided for compatibility only, it doesn't affect detection)
 - `options.signal` (AbortSignal): Cancel creation
-- `options.monitor` (function): Download progress callback (for API compatibility)
+- `options.monitor` (function): Download progress callback
 
 **Returns:** `Promise<LanguageDetector>`
 
@@ -147,54 +148,37 @@ Available input quota for detection operations.
 
 ### `detector.expectedInputLanguages` (readonly)
 
-Array of expected input language codes.
+Array of expected input language codes (optimization hint only, does not affect detection results).
+
+### `LanguageDetector.dispose()`
+
+Static method to cleanup CLD3 resources globally.
 
 ## Supported Languages
 
-| Code | Language | Script |
-|------|----------|--------|
-| en | English | Latin |
-| de | German | Latin |
-| fr | French | Latin |
-| es | Spanish | Latin |
-| it | Italian | Latin |
-| pt | Portuguese | Latin |
-| nl | Dutch | Latin |
-| pl | Polish | Latin |
-| uk | Ukrainian | Cyrillic |
-| zh | Chinese | Han |
-| ja | Japanese | Hiragana/Katakana/Han |
-| ko | Korean | Hangul |
-| ar | Arabic | Arabic |
-| he | Hebrew | Hebrew |
-| hi | Hindi | Devanagari |
-| th | Thai | Thai |
-| vi | Vietnamese | Latin |
-| tr | Turkish | Latin |
-| ... | [40+ languages] | ... |
+CLD3 supports **104 languages** with BCP-47 language codes. For the complete list, see [CLD3 Supported Languages](https://github.com/google/cld3#supported-languages).
 
 ## How It Works
 
-This polyfill uses techniques similar to Google's [CLD3 (Compact Language Detector v3)](https://github.com/ArtVladimir/CLD3):
+This polyfill uses [cld3-asm](github.com/kwonoj/cld3-asm), a WebAssembly port of Google's CLD3:
 
-1. **Script Detection**: First identifies the Unicode script(s) used in the text (Latin, Cyrillic, Han, etc.)
+1. **Neural Network Model**: CLD3 uses a neural network trained on text from the web to identify languages
 
-2. **Trigram Analysis**: Extracts character trigrams from the input text and compares them against pre-computed language profiles
+2. **On-Device Processing**: All detection runs locally in WebAssembly - no data is sent to any server
 
-3. **Confidence Scoring**: Uses a softmax-like normalization to convert raw scores into confidence values
+3. **High Accuracy**: The same model used in Chrome's built-in LanguageDetector API
 
-4. **Script Boosting**: Languages matching the detected script receive a confidence boost
+4. **Lazy Loading**: The WASM binary (~1MB) is loaded on first use
 
 ## Comparison with Native API
 
 | Feature | Native API | Polyfill |
 |---------|------------|----------|
-| Model | On-device AI (CLD3) | Trigram analysis |
+| Model | CLD3 (on-device) | CLD3 (WASM) |
 | Privacy | Full | Full (no network) |
-| Accuracy | Very High | High |
-| Size | ~1MB (downloaded) | ~15KB |
-| Speed | Fast | Very Fast |
-| Languages | Browser-dependent | 40+ |
+| Accuracy | Very High | Very High (same model) |
+| Size | ~1MB (system) | ~1MB (downloaded) |
+| Languages | 104 | 104 |
 
 ## Development
 
@@ -223,3 +207,8 @@ npm run dev
 ## License
 
 MIT
+
+## Credits
+
+- [CLD3](github.com/google/cld3) - Google's Compact Language Detector v3 (CLD3)
+- [cld3-asm](github.com/kwonoj/cld3-asm) - WebAssembly port of CLD3

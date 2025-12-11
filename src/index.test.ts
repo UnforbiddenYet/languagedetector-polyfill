@@ -1,13 +1,15 @@
-import { describe, it, expect, beforeEach, afterEach } from "vitest";
+import { describe, it, expect, beforeEach, afterEach, beforeAll } from "vitest";
 import {
   LanguageDetector,
   installPolyfill,
   isNativeAPIAvailable,
-  getSupportedLanguages,
-  isLanguageSupported,
-  analyzeScripts,
-  extractTrigrams,
+  initCld3,
 } from "./index";
+
+// Initialize CLD3 before all tests
+beforeAll(async () => {
+  await initCld3();
+}, 30000); // 30 second timeout for WASM load
 
 describe("LanguageDetector", () => {
   let detector: LanguageDetector;
@@ -46,11 +48,11 @@ describe("LanguageDetector", () => {
   });
 
   describe("availability()", () => {
-    it('should return "available" for supported languages', async () => {
+    it('should return "available" or "downloadable" for supported languages', async () => {
       const status = await LanguageDetector.availability({
         expectedInputLanguages: ["en", "de"],
       });
-      expect(status).toBe("available");
+      expect(["available", "downloadable"]).toContain(status);
     });
 
     it('should return "unavailable" for mostly unsupported languages', async () => {
@@ -60,9 +62,9 @@ describe("LanguageDetector", () => {
       expect(status).toBe("unavailable");
     });
 
-    it('should return "available" with no options', async () => {
+    it('should return "available" or "downloadable" with no options', async () => {
       const status = await LanguageDetector.availability();
-      expect(status).toBe("available");
+      expect(["available", "downloadable"]).toContain(status);
     });
   });
 
@@ -72,7 +74,7 @@ describe("LanguageDetector", () => {
         "The quick brown fox jumps over the lazy dog. This is a longer English sentence for better detection accuracy."
       );
       expect(results[0].detectedLanguage).toBe("en");
-      expect(results[0].confidence).toBeGreaterThan(0.05);
+      expect(results[0].confidence).toBeGreaterThan(0.5);
     });
 
     it("should detect German text", async () => {
@@ -80,15 +82,13 @@ describe("LanguageDetector", () => {
         "Das ist ein deutscher Satz mit mehreren Wörtern und noch mehr deutschem Text für bessere Erkennung."
       );
       expect(results[0].detectedLanguage).toBe("de");
-      expect(results[0].confidence).toBeGreaterThan(0.05);
+      expect(results[0].confidence).toBeGreaterThan(0.5);
     });
 
     it("should detect French text", async () => {
-      const results = await detector.detect(
-        "Bonjour le monde, c'est une belle journée aujourd'hui. Je suis très content de vous parler en français."
-      );
+      const results = await detector.detect("Bonjour le monde!");
       expect(results[0].detectedLanguage).toBe("fr");
-      expect(results[0].confidence).toBeGreaterThan(0.05);
+      expect(results[0].confidence).toBeGreaterThan(0.9);
     });
 
     it("should detect Spanish text", async () => {
@@ -96,7 +96,7 @@ describe("LanguageDetector", () => {
         "Hola mundo, este es un texto en español con muchas palabras. Estoy muy contento de hablar español hoy."
       );
       expect(results[0].detectedLanguage).toBe("es");
-      expect(results[0].confidence).toBeGreaterThan(0.05);
+      expect(results[0].confidence).toBeGreaterThan(0.5);
     });
 
     it("should detect Italian text", async () => {
@@ -104,7 +104,7 @@ describe("LanguageDetector", () => {
         "Ciao mondo, questo è un testo in italiano. Sono molto felice di parlare italiano oggi con voi."
       );
       expect(results[0].detectedLanguage).toBe("it");
-      expect(results[0].confidence).toBeGreaterThan(0.05);
+      expect(results[0].confidence).toBeGreaterThan(0.5);
     });
 
     it("should detect Portuguese text", async () => {
@@ -112,7 +112,7 @@ describe("LanguageDetector", () => {
         "Olá mundo, este é um texto em português. Estou muito feliz de falar português hoje com vocês."
       );
       expect(results[0].detectedLanguage).toBe("pt");
-      expect(results[0].confidence).toBeGreaterThan(0.05);
+      expect(results[0].confidence).toBeGreaterThan(0.5);
     });
 
     it("should detect Ukrainian text (Cyrillic)", async () => {
@@ -120,40 +120,48 @@ describe("LanguageDetector", () => {
         "Привіт світ, це текст українською мовою. Я дуже радий говорити українською сьогодні."
       );
       expect(results[0].detectedLanguage).toBe("uk");
-      expect(results[0].confidence).toBeGreaterThan(0.05);
+      expect(results[0].confidence).toBeGreaterThan(0.5);
     });
 
     it("should detect Chinese text", async () => {
-      const results = await detector.detect("你好世界，这是中文文本。");
+      const results = await detector.detect(
+        "你好世界，这是中文文本。这是一段较长的中文文字。"
+      );
       expect(results[0].detectedLanguage).toBe("zh");
-      expect(results[0].confidence).toBeGreaterThan(0.1);
+      expect(results[0].confidence).toBeGreaterThan(0.5);
     });
 
     it("should detect Japanese text", async () => {
       const results = await detector.detect(
-        "こんにちは世界、これは日本語のテキストです。"
+        "こんにちは世界、これは日本語のテキストです。今日はとても良い日です。"
       );
       expect(results[0].detectedLanguage).toBe("ja");
-      expect(results[0].confidence).toBeGreaterThan(0.1);
+      expect(results[0].confidence).toBeGreaterThan(0.5);
     });
 
     it("should detect Korean text", async () => {
       const results = await detector.detect(
-        "안녕하세요 세계, 이것은 한국어 텍스트입니다."
+        "안녕하세요 세계, 이것은 한국어 텍스트입니다. 오늘 정말 좋은 날이에요."
       );
       expect(results[0].detectedLanguage).toBe("ko");
-      expect(results[0].confidence).toBeGreaterThan(0.1);
+      expect(results[0].confidence).toBeGreaterThan(0.5);
     });
 
     it("should detect Arabic text", async () => {
-      const results = await detector.detect("مرحبا بالعالم، هذا نص عربي.");
+      const results = await detector.detect(
+        "مرحبا بالعالم، هذا نص عربي. أنا سعيد جداً بالتحدث بالعربية اليوم."
+      );
       expect(results[0].detectedLanguage).toBe("ar");
-      expect(results[0].confidence).toBeGreaterThan(0.1);
+      expect(results[0].confidence).toBeGreaterThan(0.5);
     });
 
     it("should return multiple results sorted by confidence", async () => {
-      const results = await detector.detect("Hello world");
-      expect(results.length).toBeGreaterThan(1);
+      const results = await detector.detect(
+        "Привіт світ, це текст українською мовою. こんにちは世界、これは日本語のテキストです。今日はとても良い日です。"
+      );
+      expect(results.length).toBe(2);
+      expect(results[0].detectedLanguage).toBe("ja");
+      expect(results[1].detectedLanguage).toBe("uk");
       expect(results[0].confidence).toBeGreaterThanOrEqual(
         results[1].confidence
       );
@@ -171,15 +179,18 @@ describe("LanguageDetector", () => {
       );
     });
 
-    it("should respect expectedInputLanguages", async () => {
-      const limitedDetector = await LanguageDetector.create({
+    it("should use expectedInputLanguages as optimization hint only", async () => {
+      const detector = await LanguageDetector.create({
         expectedInputLanguages: ["de", "fr"],
       });
 
-      const results = await limitedDetector.detect("Hello world");
-      // Should only return de or fr
-      expect(["de", "fr"]).toContain(results[0].detectedLanguage);
-      limitedDetector.destroy();
+      // Should still detect English correctly even though it's not in expectedInputLanguages
+      const results = await detector.detect(
+        "Hello world, this is English text"
+      );
+      expect(results[0].detectedLanguage).toBe("en");
+
+      detector.destroy();
     });
   });
 
@@ -215,68 +226,6 @@ describe("LanguageDetector", () => {
       const initialQuota = detector.inputQuota;
       await detector.detect("Hello world");
       expect(detector.inputQuota).toBeLessThan(initialQuota);
-    });
-  });
-});
-
-describe("Utility functions", () => {
-  describe("getSupportedLanguages()", () => {
-    it("should return array of language codes", () => {
-      const languages = getSupportedLanguages();
-      expect(Array.isArray(languages)).toBe(true);
-      expect(languages).toContain("en");
-      expect(languages).toContain("de");
-      expect(languages).toContain("fr");
-      expect(languages).toContain("zh");
-      expect(languages).toContain("ja");
-    });
-  });
-
-  describe("isLanguageSupported()", () => {
-    it("should return true for supported languages", () => {
-      expect(isLanguageSupported("en")).toBe(true);
-      expect(isLanguageSupported("en-US")).toBe(true);
-      expect(isLanguageSupported("de")).toBe(true);
-    });
-
-    it("should return false for unsupported languages", () => {
-      expect(isLanguageSupported("xyz")).toBe(false);
-    });
-  });
-
-  describe("analyzeScripts()", () => {
-    it("should detect Latin script", () => {
-      const scripts = analyzeScripts("Hello world");
-      expect(scripts[0].script).toBe("Latin");
-    });
-
-    it("should detect Cyrillic script", () => {
-      const scripts = analyzeScripts("Привет мир");
-      expect(scripts[0].script).toBe("Cyrillic");
-    });
-
-    it("should detect Han script", () => {
-      const scripts = analyzeScripts("你好世界");
-      expect(scripts[0].script).toBe("Han");
-    });
-
-    it("should detect mixed scripts", () => {
-      const scripts = analyzeScripts("Hello 世界");
-      expect(scripts.length).toBe(2);
-    });
-  });
-
-  describe("extractTrigrams()", () => {
-    it("should extract trigrams from text", () => {
-      const trigrams = extractTrigrams("hello");
-      expect(trigrams.has("hel")).toBe(true);
-      expect(trigrams.has("ell")).toBe(true);
-      expect(trigrams.has("llo")).toBe(true);
-    });
-
-    it("should normalize to lowercase", () => {
-      const trigrams = extractTrigrams("HELLO");
-      expect(trigrams.has("hel")).toBe(true);
     });
   });
 });
