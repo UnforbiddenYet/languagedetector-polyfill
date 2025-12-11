@@ -29,14 +29,6 @@ export type {
   AvailabilityStatus,
 } from "./types";
 
-export {
-  initCld3,
-  isCld3Ready,
-  detectWithCld3,
-  disposeCld3,
-  CLD3_SUPPORTED_LANGUAGES,
-} from "./cld3-engine";
-
 import { LanguageDetector } from "./language-detector";
 
 /**

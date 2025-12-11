@@ -1,15 +1,28 @@
-import { describe, it, expect, beforeEach, afterEach, beforeAll } from "vitest";
+import {
+  describe,
+  it,
+  expect,
+  beforeEach,
+  afterEach,
+  beforeAll,
+  afterAll,
+} from "vitest";
 import {
   LanguageDetector,
   installPolyfill,
   isNativeAPIAvailable,
-  initCld3,
 } from "./index";
+
+let wasmInitializingDetector: LanguageDetector;
 
 // Initialize CLD3 before all tests
 beforeAll(async () => {
-  await initCld3();
+  wasmInitializingDetector = await LanguageDetector.create();
 }, 30000); // 30 second timeout for WASM load
+
+afterAll(() => {
+  wasmInitializingDetector.destroy();
+});
 
 describe("LanguageDetector", () => {
   let detector: LanguageDetector;
