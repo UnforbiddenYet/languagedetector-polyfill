@@ -206,7 +206,11 @@ npm run dev
 
 ## License
 
-MIT
+# License
+
+- language-detector-polyfill: [MIT](https://github.com/unforbiddenyet/language-detector-polyfill/blob/master/LICENSE)
+- cld3-asm: [MIT](https://github.com/kwonoj/cld3-asm/blob/master/LICENSE)
+- cld3: [original license](https://github.com/google/cld3/blob/master/LICENSE)
 
 ## Credits
 
