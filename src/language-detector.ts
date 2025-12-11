@@ -19,19 +19,19 @@ import {
  * @see https://developer.mozilla.org/en-US/docs/Web/API/LanguageDetector
  */
 export class LanguageDetector {
-  private _destroyed = false;
-  private _expectedInputLanguages: readonly string[];
-  private _inputQuota: number;
+  #destroyed = false;
+  #expectedInputLanguages: readonly string[];
+  #inputQuota: number;
 
   /**
    * Private constructor - use LanguageDetector.create() instead
    */
   private constructor(options?: LanguageDetectorCreateOptions) {
-    this._expectedInputLanguages = Object.freeze(
+    this.#expectedInputLanguages = Object.freeze(
       options?.expectedInputLanguages?.slice() ?? []
     );
     // Simulated quota (in practice, this would be based on model limits)
-    this._inputQuota = 10000;
+    this.#inputQuota = 10000;
   }
 
   /**
@@ -39,8 +39,8 @@ export class LanguageDetector {
    * @readonly
    */
   get inputQuota(): number {
-    this.checkDestroyed();
-    return this._inputQuota;
+    this.#checkDestroyed();
+    return this.#inputQuota;
   }
 
   /**
@@ -48,8 +48,8 @@ export class LanguageDetector {
    * @readonly
    */
   get expectedInputLanguages(): readonly string[] {
-    this.checkDestroyed();
-    return this._expectedInputLanguages;
+    this.#checkDestroyed();
+    return this.#expectedInputLanguages;
   }
 
   /**
@@ -177,7 +177,7 @@ export class LanguageDetector {
    * ```
    */
   async detect(text: string): Promise<LanguageDetectionResult[]> {
-    this.checkDestroyed();
+    this.#checkDestroyed();
 
     if (typeof text !== "string") {
       throw new TypeError("Input must be a string");
@@ -189,7 +189,7 @@ export class LanguageDetector {
     }
 
     // Update quota usage
-    this._inputQuota = Math.max(0, this._inputQuota - text.length);
+    this.#inputQuota = Math.max(0, this.#inputQuota - text.length);
 
     // Use CLD3 neural network for detection
     // Note: expectedInputLanguages is stored for API compatibility but doesn't affect detection
@@ -203,7 +203,7 @@ export class LanguageDetector {
    * @returns Promise resolving to the quota usage amount
    */
   async measureInputUsage(text: string): Promise<number> {
-    this.checkDestroyed();
+    this.#checkDestroyed();
 
     if (typeof text !== "string") {
       throw new TypeError("Input must be a string");
@@ -218,15 +218,15 @@ export class LanguageDetector {
    * Call this when you're done using the detector.
    */
   destroy(): void {
-    this._destroyed = true;
+    this.#destroyed = true;
     disposeCld3();
   }
 
   /**
    * Check if the detector has been destroyed
    */
-  private checkDestroyed(): void {
-    if (this._destroyed) {
+  #checkDestroyed(): void {
+    if (this.#destroyed) {
       throw new DOMException(
         "LanguageDetector has been destroyed",
         "InvalidStateError"
