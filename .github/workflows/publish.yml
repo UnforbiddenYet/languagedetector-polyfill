@@ -51,8 +51,13 @@ jobs:
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
 
-      - name: Create git tag
+      - name: Create git tag and GitHub release
         if: steps.version.outputs.changed == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
         run: |
           git tag "v${{ steps.version.outputs.current }}"
           git push origin "v${{ steps.version.outputs.current }}"
+          gh release create "v${{ steps.version.outputs.current }}" \
+            --title "v${{ steps.version.outputs.current }}" \
+            --generate-notes
