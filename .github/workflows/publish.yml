@@ -1,0 +1,58 @@
+name: Publish to NPM
+
+on:
+  push:
+    branches: [main]
+
+permissions:
+  contents: write
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          registry-url: 'https://registry.npmjs.org'
+
+      - name: Check if version changed
+        id: version
+        run: |
+          PUBLISHED=$(npm view languagedetector-polyfill version 2>/dev/null || echo "0.0.0")
+          CURRENT=$(node -p "require('./package.json').version")
+          echo "published=$PUBLISHED" >> $GITHUB_OUTPUT
+          echo "current=$CURRENT" >> $GITHUB_OUTPUT
+          if [ "$PUBLISHED" != "$CURRENT" ]; then
+            echo "changed=true" >> $GITHUB_OUTPUT
+          else
+            echo "changed=false" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Install dependencies
+        if: steps.version.outputs.changed == 'true'
+        run: npm ci
+
+      - name: Run tests
+        if: steps.version.outputs.changed == 'true'
+        run: npm test
+
+      - name: Build
+        if: steps.version.outputs.changed == 'true'
+        run: npm run build
+
+      - name: Publish to NPM
+        if: steps.version.outputs.changed == 'true'
+        run: npm publish --access=public
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+
+      - name: Create git tag
+        if: steps.version.outputs.changed == 'true'
+        run: |
+          git tag "v${{ steps.version.outputs.current }}"
+          git push origin "v${{ steps.version.outputs.current }}"
