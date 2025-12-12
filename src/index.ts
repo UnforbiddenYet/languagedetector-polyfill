@@ -80,15 +80,5 @@ export function installPolyfill(force = false): boolean {
   return true;
 }
 
-/**
- * Automatically install polyfill if native API is not available
- * This is useful for automatic polyfilling in script tags
- */
-export function autoInstall(): void {
-  if (!isNativeAPIAvailable()) {
-    installPolyfill();
-  }
-}
-
 // Default export for convenience
 export default LanguageDetector;
