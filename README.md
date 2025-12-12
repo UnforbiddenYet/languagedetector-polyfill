@@ -9,7 +9,6 @@ A polyfill for the [LanguageDetector Web API](https://developer.mozilla.org/en-U
 - WebAssembly-based for high performance
 - Supports 104 languages (see [CLD3 supported languages](https://github.com/google/cld3#supported-languages))
 - TypeScript support with full type definitions
-- Works in browsers and Node.js
 
 ## Installation
 
@@ -19,24 +18,7 @@ npm install language-detector-polyfill
 
 ## Usage
 
-### Basic Usage
-
-```javascript
-import { LanguageDetector } from 'language-detector-polyfill';
-
-// Create a detector instance (loads CLD3 WASM on first use)
-const detector = await LanguageDetector.create();
-
-// Detect language
-const results = await detector.detect('Bonjour le monde!');
-console.log(results[0].detectedLanguage); // "fr"
-console.log(results[0].confidence);       // 0.99
-
-// Clean up when done
-detector.destroy();
-```
-
-### Install as Global Polyfill
+### Auto install
 
 ```javascript
 import { installPolyfill } from 'language-detector-polyfill';
@@ -49,47 +31,79 @@ const detector = await LanguageDetector.create();
 const results = await detector.detect('Hello world');
 ```
 
-### Check Availability
 
-```javascript
-import { LanguageDetector } from 'language-detector-polyfill';
+### Script Tag (UMD)
 
-const availability = await LanguageDetector.availability({
-  expectedInputLanguages: ['en', 'uk', 'ja']
-});
+For classic `<script>` tags without module bundlers:
 
-if (availability === 'available' || availability === 'downloadable') {
-  const detector = await LanguageDetector.create({
-    monitor(monitor) {
-      monitor.addEventListener('downloadprogress', (e) => {
-        console.log(`Loading: ${Math.floor(e.loaded * 100)}%`);
-      });
-    }
-  });
-  // Use detector...
-}
+```html
+<script src="https://unpkg.com/language-detector-polyfill"></script>
+<script>
+  (async () => {
+    const { installPolyfill } = LanguageDetectorPolyfill;
+    installPolyfill();
+
+    const detector = await LanguageDetector.create();
+    const results = await detector.detect('Bonjour le monde!');
+    console.log(results[0].detectedLanguage); // "fr"
+  })();
+</script>
 ```
 
-### With Expected Languages
+Or via jsdelivr:
 
-**Important:** Per the [Web API specification](https://webmachinelearning.github.io/translation-api/#language-detector-language-detection), `expectedInputLanguages` is used as an optimization hint during model initialization. The CLD3 WASM module loads all languages at once, so this `expectedInputLanguages` API is provided for compatibility but doesn't affect detection.
+```html
+<script src="https://cdn.jsdelivr.net/npm/language-detector-polyfill"></script>
+```
+
+### Script Tag (ESM)
+
+For `<script type="module">`, use the explicit ESM path:
+
+```html
+<script type="module">
+  import { installPolyfill } from 'https://unpkg.com/language-detector-polyfill/dist/language-detector-polyfill.js';
+  installPolyfill();
+
+  // Now LanguageDetector is available globally
+  const detector = await LanguageDetector.create();
+  const results = await detector.detect('Bonjour le monde!');
+  console.log(results[0].detectedLanguage); // "fr"
+</script>
+```
+
+### Additionally, exposed LanguageDetector could be used as a fallback for the native LanguageDetector Web API in Google Chrome
+
+```javascript
+import { LanguageDetector as LanguageDetectorFallback } from 'language-detector-polyfill';
+
+let detector = await window.LanguageDetector.create();
+
+try {
+  detector.detect('Bonjour le monde!');
+} catch (e) {
+  detector = await LanguageDetectorFallback.create();
+}
+
+// Detect language
+const results = await detector.detect('Bonjour le monde!');
+console.log(results[0].detectedLanguage); // "fr"
+console.log(results[0].confidence);       // 0.99
+
+// Clean up when done
+detector.destroy();
+```
+
+## Limitations
+
+### Expected Languages
+
+**Important:** Per the [Web API specification](https://webmachinelearning.github.io/translation-api/#language-detector-language-detection), `expectedInputLanguages` is used as an optimization hint during model initialization. The CLD3 WASM module loads all languages at once, so this `expectedInputLanguages` API is provided for compatibility but it doesn't affect detection.
 
 ```javascript
 const detector = await LanguageDetector.create({
   expectedInputLanguages: ['en', 'es', 'fr', 'de']
 });
-```
-
-### Script Tag (Auto-Install)
-
-```html
-<script type="module">
-  import { autoInstall } from 'https://unpkg.com/language-detector-polyfill';
-  autoInstall();
-
-  // Now LanguageDetector is available globally
-  const detector = await LanguageDetector.create();
-</script>
 ```
 
 ## API Reference
@@ -134,7 +148,7 @@ interface LanguageDetectionResult {
 
 ### `detector.measureInputUsage(text)`
 
-Measure how much input quota would be used.
+Measure how much input quota would be used. As `cld3-asm` does not expose similar API so it simply returns the length of text.
 
 **Returns:** `Promise<number>`
 
@@ -144,11 +158,11 @@ Release resources. Call when done using the detector.
 
 ### `detector.inputQuota` (readonly)
 
-Available input quota for detection operations.
+Available input quota for detection operations. As `cld3-asm` does not expose similar API this property returns the remaining number of characters left after subtracting all the characters passed to `detector.detect(text)`. Initialized with 10000, minimum value is 0.
 
 ### `detector.expectedInputLanguages` (readonly)
 
-Array of expected input language codes (optimization hint only, does not affect detection results).
+Array of expected input language codes.
 
 ### `LanguageDetector.dispose()`
 
@@ -168,7 +182,7 @@ This polyfill uses [cld3-asm](github.com/kwonoj/cld3-asm), a WebAssembly port of
 
 3. **High Accuracy**: The same model used in Chrome's built-in LanguageDetector API
 
-4. **Lazy Loading**: The WASM binary (~1MB) is loaded on first use
+4. **Lazy Loading**: The WASM binary (emscripten-generated cld3.js) (~1MB) is loaded on first use
 
 ## Comparison with Native API
 
@@ -176,8 +190,8 @@ This polyfill uses [cld3-asm](github.com/kwonoj/cld3-asm), a WebAssembly port of
 |---------|------------|----------|
 | Model | CLD3 (on-device) | CLD3 (WASM) |
 | Privacy | Full | Full (no network) |
-| Accuracy | Very High | Very High (same model) |
-| Size | ~1MB (system) | ~1MB (downloaded) |
+| Accuracy | Very High | same |
+| Size | ~1MB (system) | 6.45 kB polyfill + 1,057.17 kB lazy-loaded WASM binary OR 1,046.90 kB UDM bundle |
 | Languages | 104 | 104 |
 
 ## Development
@@ -198,15 +212,15 @@ npm run dev
 
 ## Browser Support
 
-- Chrome 90+
 - Firefox 90+
 - Safari 14+
 - Edge 90+
-- Node.js 16+
+- Chrome 90+ (please prefer using native API in v138+)
+
+**No Node.js Support**
+
 
 ## License
-
-# License
 
 - language-detector-polyfill: [MIT](https://github.com/unforbiddenyet/language-detector-polyfill/blob/master/LICENSE)
 - cld3-asm: [MIT](https://github.com/kwonoj/cld3-asm/blob/master/LICENSE)
