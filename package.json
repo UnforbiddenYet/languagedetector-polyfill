@@ -6,15 +6,15 @@
   "exports": {
     ".": {
       "types": "./dist/index.d.ts",
-      "browser": "./dist/language-detector-polyfill.js",
-      "import": "./dist/language-detector-polyfill.js",
-      "default": "./dist/language-detector-polyfill.js"
+      "browser": "./dist/languagedetector-polyfill.js",
+      "import": "./dist/languagedetector-polyfill.js",
+      "default": "./dist/languagedetector-polyfill.js"
     }
   },
-  "main": "./dist/language-detector-polyfill.js",
+  "main": "./dist/languagedetector-polyfill.js",
   "types": "./dist/index.d.ts",
-  "unpkg": "./dist/language-detector-polyfill.umd.cjs",
-  "jsdelivr": "./dist/language-detector-polyfill.umd.cjs",
+  "unpkg": "./dist/languagedetector-polyfill.umd.cjs",
+  "jsdelivr": "./dist/languagedetector-polyfill.umd.cjs",
   "sideEffects": false,
   "files": [
     "dist",

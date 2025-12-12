@@ -44,7 +44,7 @@ export default defineConfig({
     lib: {
       entry: resolve(__dirname, "src/index.ts"),
       name: "LanguageDetectorPolyfill",
-      fileName: "language-detector-polyfill",
+      fileName: "languagedetector-polyfill",
       formats: ["es", "umd"],
     },
     rollupOptions: {

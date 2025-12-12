@@ -9,7 +9,7 @@
  *
  * @example
  * ```js
- * import { LanguageDetector, installPolyfill } from 'language-detector-polyfill';
+ * import { LanguageDetector, installPolyfill } from 'languagedetector-polyfill';
  *
  * // Install globally (optional)
  * installPolyfill();
@@ -51,7 +51,7 @@ export function isNativeAPIAvailable(): boolean {
  *
  * @example
  * ```js
- * import { installPolyfill } from 'language-detector-polyfill';
+ * import { installPolyfill } from 'languagedetector-polyfill';
  *
  * // Only install if native API is not available
  * installPolyfill();
