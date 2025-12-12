@@ -1,6 +1,6 @@
 {
   "name": "languagedetector-polyfill",
-  "version": "0.1.0",
+  "version": "1.0.0",
   "description": "Polyfill for the LanguageDetector Web API using CLD3 (Compact Language Detector v3) neural model",
   "type": "module",
   "exports": {
