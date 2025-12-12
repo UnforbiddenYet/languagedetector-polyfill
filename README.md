@@ -13,7 +13,7 @@ A polyfill for the [LanguageDetector Web API](https://developer.mozilla.org/en-U
 ## Installation
 
 ```bash
-npm install language-detector-polyfill
+npm install languagedetector-polyfill
 ```
 
 ## Usage
@@ -21,7 +21,7 @@ npm install language-detector-polyfill
 ### Auto install
 
 ```javascript
-import { installPolyfill } from 'language-detector-polyfill';
+import { installPolyfill } from 'languagedetector-polyfill';
 
 // Install globally (only if native API is not available)
 installPolyfill();
@@ -37,7 +37,7 @@ const results = await detector.detect('Hello world');
 For classic `<script>` tags without module bundlers:
 
 ```html
-<script src="https://unpkg.com/language-detector-polyfill"></script>
+<script src="https://unpkg.com/languagedetector-polyfill"></script>
 <script>
   (async () => {
     const { installPolyfill } = LanguageDetectorPolyfill;
@@ -53,7 +53,7 @@ For classic `<script>` tags without module bundlers:
 Or via jsdelivr:
 
 ```html
-<script src="https://cdn.jsdelivr.net/npm/language-detector-polyfill"></script>
+<script src="https://cdn.jsdelivr.net/npm/languagedetector-polyfill"></script>
 ```
 
 ### Script Tag (ESM)
@@ -62,7 +62,7 @@ For `<script type="module">`, use the explicit ESM path:
 
 ```html
 <script type="module">
-  import { installPolyfill } from 'https://unpkg.com/language-detector-polyfill/dist/language-detector-polyfill.js';
+  import { installPolyfill } from 'https://unpkg.com/languagedetector-polyfill/dist/languagedetector-polyfill.js';
   installPolyfill();
 
   // Now LanguageDetector is available globally
@@ -72,10 +72,10 @@ For `<script type="module">`, use the explicit ESM path:
 </script>
 ```
 
-### Additionally, exposed LanguageDetector could be used as a fallback for the native LanguageDetector Web API in Google Chrome
+### Additionally, LanguageDetector ESM could be used as a fallback for the native LanguageDetector Web API
 
 ```javascript
-import { LanguageDetector as LanguageDetectorFallback } from 'language-detector-polyfill';
+import { LanguageDetector as LanguageDetectorFallback } from 'languagedetector-polyfill';
 
 let detector = await window.LanguageDetector.create();
 
@@ -194,6 +194,19 @@ This polyfill uses [cld3-asm](github.com/kwonoj/cld3-asm), a WebAssembly port of
 | Size | ~1MB (system) | 6.45 kB polyfill + 1,057.17 kB lazy-loaded WASM binary OR 1,046.90 kB UDM bundle |
 | Languages | 104 | 104 |
 
+## Browser Support
+
+- Firefox 90+
+- Safari 14+
+- Edge 90+
+- Chrome 90+ (please prefer using native API in v138+)
+
+**No Node.js Support**
+
+## Roadmap
+
+- [ ] Replace outdated `cld3-asm`/`emscripten-wasm-loader` with modern ESM-compatible WASM build
+
 ## Development
 
 ```bash
@@ -210,19 +223,9 @@ npm run build
 npm run dev
 ```
 
-## Browser Support
-
-- Firefox 90+
-- Safari 14+
-- Edge 90+
-- Chrome 90+ (please prefer using native API in v138+)
-
-**No Node.js Support**
-
-
 ## License
 
-- language-detector-polyfill: [MIT](https://github.com/unforbiddenyet/language-detector-polyfill/blob/master/LICENSE)
+- languagedetector-polyfill: [MIT](https://github.com/unforbiddenyet/languagedetector-polyfill/blob/master/LICENSE)
 - cld3-asm: [MIT](https://github.com/kwonoj/cld3-asm/blob/master/LICENSE)
 - cld3: [original license](https://github.com/google/cld3/blob/master/LICENSE)
 

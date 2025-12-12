@@ -1,7 +1,7 @@
 {
-  "name": "language-detector-polyfill",
+  "name": "languagedetector-polyfill",
   "version": "0.1.0",
-  "description": "Polyfill for the LanguageDetector Web API using CLD3-like trigram analysis",
+  "description": "Polyfill for the LanguageDetector Web API using CLD3 (Compact Language Detector v3) neural model",
   "type": "module",
   "exports": {
     ".": {
@@ -18,26 +18,32 @@
   "sideEffects": false,
   "files": [
     "dist",
-    "src"
+    "src",
+    "!src/**/*.test.ts"
   ],
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/unforbiddenyet/languagedetector-polyfill.git"
+  },
+  "bugs": {
+    "url": "https://github.com/unforbiddenyet/languagedetector-polyfill/issues"
+  },
+  "homepage": "https://github.com/unforbiddenyet/languagedetector-polyfill#readme",
   "scripts": {
     "dev": "vite",
     "build": "vite build && tsc --emitDeclarationOnly",
     "test": "vitest run",
     "test:watch": "vitest",
     "prepublishOnly": "npm run build",
-    "publint": "npm pack &>/dev/null && publint ./language-detector-polyfill-0.1.0.tgz"
+    "publint": "publint --pack npm"
   },
   "keywords": [
     "LanguageDetector",
     "web-api",
-    "language-detector",
     "polyfill",
-    "language detection",
-    "cld",
     "cld3"
   ],
-  "author": "UnforbiddenYet",
+  "author": "Dmytro Lubenets (hazel-uncared.1r@icloud.com)",
   "license": "MIT",
   "dependencies": {
     "cld3-asm": "^4.0.0"
