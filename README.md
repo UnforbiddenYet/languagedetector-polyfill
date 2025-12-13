@@ -1,6 +1,6 @@
 # LanguageDetector Polyfill
 
-A polyfill for the [LanguageDetector Web API](https://developer.mozilla.org/en-US/docs/Web/API/LanguageDetector) that uses Google's [CLD3 (Compact Language Detector v3)](https://github.com/google/cld3) neural network model via [WebAssembly cld3 binary](github.com/kwonoj/cld3-asm) for accurate language detection.
+A polyfill for the [LanguageDetector Web API](https://developer.mozilla.org/en-US/docs/Web/API/LanguageDetector) that uses Google's [CLD3 (Compact Language Detector v3)](https://github.com/google/cld3) neural network model via [WebAssembly cld3 binary](https://github.com/kwonoj/cld3-asm) for accurate language detection.
 
 ## Features
 
@@ -174,7 +174,7 @@ CLD3 supports **104 languages** with BCP-47 language codes. For the complete lis
 
 ## How It Works
 
-This polyfill uses [cld3-asm](github.com/kwonoj/cld3-asm), a WebAssembly port of Google's CLD3:
+This polyfill uses [cld3-asm](https://github.com/kwonoj/cld3-asm), a WebAssembly port of Google's CLD3:
 
 1. **Neural Network Model**: CLD3 uses a neural network trained on text from the web to identify languages
 
