@@ -228,6 +228,19 @@ describe("LanguageDetector", () => {
 
       await expect(instance.detect("test")).rejects.toThrow("destroyed");
     });
+
+    it("should not affect other instances", async () => {
+      const instance = await LanguageDetector.create();
+      const instance2 = await LanguageDetector.create();
+
+      instance.destroy();
+      await expect(instance.detect("Hello world!")).rejects.toThrow(
+        "destroyed",
+      );
+
+      await expect(instance2.detect("Hello world, this is English text"))
+        .resolves.toBeTruthy;
+    });
   });
 
   describe("inputQuota", () => {
